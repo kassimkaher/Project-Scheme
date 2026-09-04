@@ -1,0 +1,3 @@
+interface:
+  display_name: Security baseline
+  short_description: Apply baseline security controls.

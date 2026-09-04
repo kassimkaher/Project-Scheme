@@ -1,0 +1,16 @@
+project:
+  name: Production Flutter Product
+  type: product
+  profile: production
+  expected_lifetime: long
+platforms:
+  backend: { enabled: true, stack: node }
+  web: { enabled: false }
+  flutter: { enabled: true }
+  android_native: { enabled: false }
+  ios_native: { enabled: false }
+database: { engine: postgres }
+environments: [dev, qa, production]
+mobile: { flavors: [dev, qa, production] }
+qa: { enabled: true, api: true, web: false, mobile: true }
+security: { sensitivity: medium, regulated: false }

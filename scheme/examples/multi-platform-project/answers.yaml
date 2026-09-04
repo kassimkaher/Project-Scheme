@@ -1,0 +1,16 @@
+project:
+  name: Enterprise Platform
+  type: product
+  profile: enterprise
+  expected_lifetime: long
+platforms:
+  backend: { enabled: true, stack: node }
+  web: { enabled: true, framework: nextjs }
+  flutter: { enabled: true }
+  android_native: { enabled: true }
+  ios_native: { enabled: true }
+database: { engine: postgres }
+environments: [dev, qa, staging, production]
+mobile: { flavors: [dev, qa, production] }
+qa: { enabled: true, api: true, web: true, mobile: true }
+security: { sensitivity: high, regulated: true }

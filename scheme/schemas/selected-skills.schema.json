@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "array",
+  "items": { "enum": ["project-bootstrap", "backend-api", "database-engineering", "web-application", "flutter-mobile", "native-android", "native-ios", "security-baseline", "qa-integration", "release-readiness"] },
+  "uniqueItems": true
+}

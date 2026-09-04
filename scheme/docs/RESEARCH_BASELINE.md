@@ -1,0 +1,3 @@
+# Research baseline
+
+Skill guidance is intentionally version-light and should be refreshed against official sources before major changes: [Next.js documentation](https://nextjs.org/docs), [Flutter architecture](https://docs.flutter.dev/app-architecture), [Android architecture](https://developer.android.com/topic/architecture), [Apple developer documentation](https://developer.apple.com/documentation/), [PostgreSQL documentation](https://www.postgresql.org/docs/), [Playwright documentation](https://playwright.dev/docs/intro), and [OWASP](https://owasp.org/). Prefer official documentation, then maintained first-party examples, before community material.

@@ -1,0 +1,3 @@
+interface:
+  display_name: Project bootstrap
+  short_description: Profile a project before generating its local control structure.

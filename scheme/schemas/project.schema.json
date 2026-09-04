@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project Scheme project profile",
+  "type": "object",
+  "required": ["project", "platforms", "environments", "qa"],
+  "properties": {
+    "project": {
+      "type": "object",
+      "required": ["name", "type", "profile"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string" },
+        "profile": { "enum": ["small", "production", "enterprise"] },
+        "expected_lifetime": { "type": "string" }
+      }
+    },
+    "platforms": { "type": "object", "additionalProperties": { "$ref": "#/$defs/platform" } },
+    "database": { "type": "object", "properties": { "engine": { "type": "string" } } },
+    "environments": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "qa": { "type": "object", "required": ["enabled"], "properties": { "enabled": { "type": "boolean" }, "api": { "type": "boolean" }, "web": { "type": "boolean" }, "mobile": { "type": "boolean" } } },
+    "security": { "type": "object", "properties": { "sensitivity": { "enum": ["low", "medium", "high"] }, "regulated": { "type": "boolean" } } }
+  },
+  "$defs": { "platform": { "type": "object", "required": ["enabled"], "properties": { "enabled": { "type": "boolean" }, "stack": { "type": "string" }, "framework": { "type": "string" } } } }
+}

@@ -12,7 +12,9 @@
     "qa:selftest": "node --env-file-if-exists=.env.local scripts/qa-selftest.mjs",
     "qa:reset": "node --env-file-if-exists=.env.local scripts/reset-dev.mjs",
     "qa:shot": "node scripts/screenshot.mjs",
-    "qa:redaction": "node scripts/redaction-test.mjs"
+    "qa:redaction": "node scripts/redaction-test.mjs",
+    "scheme:bootstrap": "node scheme/scripts/bootstrap.mjs",
+    "scheme:test": "node scheme/tests/bootstrap.test.mjs"
   },
   "dependencies": {
     "next": "^15.5.0",
