@@ -17,5 +17,10 @@ export async function GET() {
     claudeModel: process.env.CLAUDE_MODEL || null,
     playwrightMcp: mcp.entry ? { available: true, version: mcp.version } : { available: false, error: mcp.error },
     maxConcurrentRuns: Number(process.env.QA_MAX_CONCURRENT_RUNS || 2),
+    isolation: {
+      mode: 'unsafe-local',
+      sandboxed: false,
+      warning: 'QA agents run with the local operator permissions; prompt confinement is not a sandbox.',
+    },
   });
 }

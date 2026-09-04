@@ -27,8 +27,8 @@ const skillRules = [
   ["database-engineering", (a) => Boolean(a.database?.engine)],
   ["web-application", (a) => a.platforms?.web?.enabled],
   ["flutter-mobile", (a) => a.platforms?.flutter?.enabled],
-  ["native-android", (a) => a.platforms?.android_native?.enabled],
-  ["native-ios", (a) => a.platforms?.ios_native?.enabled],
+  ["android-native", (a) => a.platforms?.android_native?.enabled],
+  ["ios-native", (a) => a.platforms?.ios_native?.enabled],
   ["security-baseline", (a) => a.security?.sensitivity === "high" || a.security?.regulated || a.project?.profile === "enterprise"],
   ["qa-integration", (a) => a.qa?.enabled],
   ["release-readiness", (a) => a.project?.profile !== "small" || a.release?.required],
@@ -70,8 +70,11 @@ function template(value, answers, skills) {
     .replaceAll("{{SKILLS}}", skills.map((skill) => `- ${skill}`).join("\n"));
 }
 
-async function writeFile(destination, content) {
+async function writeFile(destination, content, overwrite = false) {
   await fs.mkdir(path.dirname(destination), { recursive: true });
+  if (!overwrite) {
+    try { await fs.access(destination); return; } catch { /* create below */ }
+  }
   await fs.writeFile(destination, content, "utf8");
 }
 
@@ -90,7 +93,7 @@ function projectYaml(answers) {
 
 function qaSystem(answers) {
   const environment = answers.environments[0];
-  return `# ${answers.project.name} QA definition\n\n\`\`\`qa-config\nversion: 1\nprojectId: ${answers.project.id ?? answers.project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}\nsystem:\n  name: ${JSON.stringify(answers.project.name)}\nenvironments:\n  - id: ${environment}\n    label: ${environment}\n    kind: ${environment}\n    # Set real values outside source control before importing into QA Orchestrator.\n    apiBaseUrl: \"\"\n    openapiUrl: \"\"\n    webApps: []\naccounts: []\ntestSafety:\n  destructiveActions: forbidden\n\`\`\`\n`;
+  return `# ${answers.project.name} QA definition\n\n\`\`\`qa-config\nversion: 1\nprojectId: ${answers.project.id ?? answers.project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}\nsystem:\n  name: ${JSON.stringify(answers.project.name)}\nenvironments:\n  - id: ${environment}\n    label: ${environment}\n    kind: ${environment}\n    # Replace this local placeholder before testing a remote system.\n    apiBaseUrl: \"http://127.0.0.1:4100\"\n    webApps: []\naccounts: []\nqa:\n  destructiveActions: forbid\n\`\`\`\n`;
 }
 
 export async function generateProject(answers, outputDirectory) {

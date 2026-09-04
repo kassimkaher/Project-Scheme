@@ -1,0 +1,3 @@
+interface:
+  display_name: Android native
+  short_description: Guide modern Android architecture, testing, and release work.

@@ -1,0 +1,28 @@
+project:
+  name: Example Project
+  type: product
+  profile: production
+  expected_lifetime: long
+  team_profile: small_team
+platforms:
+  backend: { enabled: true, stack: node }
+  web: { enabled: true, framework: nextjs }
+  flutter: { enabled: false }
+  android_native: { enabled: false }
+  ios_native: { enabled: false }
+database: { engine: postgres }
+architecture: { style: feature_first }
+contracts: { openapi: ./docs/openapi.yaml }
+auth: { enabled: true }
+tenancy: { enabled: false }
+media: { enabled: false }
+payments: { enabled: false }
+realtime: { enabled: false }
+offline: { enabled: false }
+environments: [dev, qa, production]
+mobile: { flavors: [] }
+deployment: { targets: [] }
+qa: { enabled: true, api: true, web: true, mobile: false }
+design: { source: "" }
+security: { sensitivity: medium, regulated: false }
+selected_skills: []

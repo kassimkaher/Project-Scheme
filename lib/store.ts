@@ -544,6 +544,7 @@ export async function createRun(
     createdAt: now,
     updatedAt: now,
     retryOf,
+    isolationMode: 'unsafe-local',
   };
   await writeJsonAtomic(path.join(dir, 'run.json'), record);
   return { record, dir };

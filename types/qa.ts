@@ -175,6 +175,8 @@ export type RunRecord = {
   retryOf?: string;
   pid?: number;
   pgid?: number;
+  /** Explicit execution boundary. unsafe-local is not a sandbox. */
+  isolationMode?: 'unsafe-local';
   exitCode?: number | null;
   signal?: string | null;
   counts?: RunCounts;

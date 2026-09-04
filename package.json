@@ -14,7 +14,10 @@
     "qa:shot": "node scripts/screenshot.mjs",
     "qa:redaction": "node scripts/redaction-test.mjs",
     "scheme:bootstrap": "node scheme/scripts/bootstrap.mjs",
-    "scheme:test": "node scheme/tests/bootstrap.test.mjs"
+    "scheme:test": "node scheme/tests/bootstrap.test.mjs",
+    "qa:run": "node scripts/qa-run.mjs",
+    "qa:run:test": "node scripts/qa-run.test.mjs",
+    "qa:backup": "node scripts/export-store.mjs"
   },
   "dependencies": {
     "next": "^15.5.0",

@@ -19,7 +19,7 @@ try {
   const small = structuredClone(base);
   const smallResult = await generateProject(small, path.join(temporary, "small"));
   assert(!smallResult.skills.includes("flutter-mobile"));
-  assert(!smallResult.skills.includes("native-android"));
+  assert(!smallResult.skills.includes("android-native"));
   assert.match(await fs.readFile(path.join(smallResult.destination, ".ai/architecture.md"), "utf8"), /simple_feature_first/);
   assert(await fs.stat(path.join(smallResult.destination, ".qa/qa-system.md")));
   await assert.rejects(fs.stat(path.join(smallResult.destination, "scheme")));
@@ -44,11 +44,24 @@ try {
   enterprise.platforms.ios_native.enabled = true;
   enterprise.security = { sensitivity: "high", regulated: true };
   const enterpriseResult = await generateProject(enterprise, path.join(temporary, "enterprise"));
-  for (const skill of ["backend-api", "web-application", "flutter-mobile", "native-android", "native-ios", "security-baseline", "release-readiness"]) assert(enterpriseResult.skills.includes(skill));
+  for (const skill of ["backend-api", "web-application", "flutter-mobile", "android-native", "ios-native", "security-baseline", "release-readiness"]) assert(enterpriseResult.skills.includes(skill));
+
+  await fs.writeFile(path.join(smallResult.destination, ".ai/decisions.md"), "# Keep this decision\n");
+  await generateProject(small, smallResult.destination);
+  assert.equal(await fs.readFile(path.join(smallResult.destination, ".ai/decisions.md"), "utf8"), "# Keep this decision\n");
+
+  // Scenarios D/E: native-only projects select their own platform guidance.
+  const android = structuredClone(base);
+  android.platforms = { backend: { enabled: false }, web: { enabled: false }, flutter: { enabled: false }, android_native: { enabled: true }, ios_native: { enabled: false } };
+  assert((await generateProject(android, path.join(temporary, "android"))).skills.includes("android-native"));
+  const ios = structuredClone(android);
+  ios.platforms.android_native.enabled = false;
+  ios.platforms.ios_native.enabled = true;
+  assert((await generateProject(ios, path.join(temporary, "ios"))).skills.includes("ios-native"));
 
   assert.throws(() => validateAnswers({}), /project.name/);
   assert.deepEqual(selectSkills({ ...base, qa: { enabled: false }, platforms: { backend: { enabled: false } }, database: {} }).includes("qa-integration"), false);
-  console.log("bootstrap tests passed: 3 scenarios, schema guards, selective skills, generated structure");
+  console.log("bootstrap tests passed: 5 scenarios, schema guards, selective skills, idempotence, generated structure");
 } finally {
   await fs.rm(temporary, { recursive: true, force: true });
 }

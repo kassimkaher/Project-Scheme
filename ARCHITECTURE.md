@@ -21,11 +21,12 @@ QA agent is told, in its prompt, that it does not edit the tested product. The
 intended loop is: build → QA run → report with reproducible defects and evidence
 → development agent fixes → re-run → human review.
 
-## Storage (`.qa-data`, schema v2)
+## Storage (`.qa-data`, schema v3)
 
 ```
 .qa-data/
   meta.json                     schema version + migration notes
+  projects.index.json           non-secret integrity index; detects missing projects
   projects/<project-id>/
     project.json                non-sensitive metadata, definition WITHOUT credential values
     secrets.enc                 AES-256-GCM: credential values only

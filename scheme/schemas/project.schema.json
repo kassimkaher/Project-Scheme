@@ -11,12 +11,25 @@
         "name": { "type": "string", "minLength": 1 },
         "type": { "type": "string" },
         "profile": { "enum": ["small", "production", "enterprise"] },
-        "expected_lifetime": { "type": "string" }
+        "expected_lifetime": { "type": "string" },
+        "team_profile": { "type": "string" }
       }
     },
     "platforms": { "type": "object", "additionalProperties": { "$ref": "#/$defs/platform" } },
     "database": { "type": "object", "properties": { "engine": { "type": "string" } } },
     "environments": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "architecture": { "type": "object", "properties": { "style": { "type": "string" } } },
+    "contracts": { "type": "object", "properties": { "openapi": { "type": "string" } } },
+    "auth": { "type": "object", "properties": { "enabled": { "type": "boolean" } } },
+    "tenancy": { "type": "object", "properties": { "enabled": { "type": "boolean" } } },
+    "media": { "type": "object", "properties": { "enabled": { "type": "boolean" } } },
+    "payments": { "type": "object", "properties": { "enabled": { "type": "boolean" } } },
+    "realtime": { "type": "object", "properties": { "enabled": { "type": "boolean" } } },
+    "offline": { "type": "object", "properties": { "enabled": { "type": "boolean" } } },
+    "mobile": { "type": "object", "properties": { "flavors": { "type": "array", "items": { "type": "string" } } } },
+    "deployment": { "type": "object", "properties": { "targets": { "type": "array", "items": { "type": "string" } } } },
+    "design": { "type": "object", "properties": { "source": { "type": "string" } } },
+    "selected_skills": { "$ref": "selected-skills.schema.json" },
     "qa": { "type": "object", "required": ["enabled"], "properties": { "enabled": { "type": "boolean" }, "api": { "type": "boolean" }, "web": { "type": "boolean" }, "mobile": { "type": "boolean" } } },
     "security": { "type": "object", "properties": { "sensitivity": { "enum": ["low", "medium", "high"] }, "regulated": { "type": "boolean" } } }
   },
