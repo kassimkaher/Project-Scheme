@@ -1,0 +1,31 @@
+{
+  "name": "qa-orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -H 127.0.0.1 -p 4100",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1 -p 4100",
+    "typecheck": "tsc --noEmit",
+    "qa:doctor": "node --env-file-if-exists=.env.local scripts/doctor.mjs",
+    "qa:browsers": "node node_modules/playwright-core/cli.js install chromium",
+    "qa:selftest": "node --env-file-if-exists=.env.local scripts/qa-selftest.mjs",
+    "qa:reset": "node --env-file-if-exists=.env.local scripts/reset-dev.mjs",
+    "qa:shot": "node scripts/screenshot.mjs",
+    "qa:redaction": "node scripts/redaction-test.mjs"
+  },
+  "dependencies": {
+    "next": "^15.5.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "yaml": "^2.8.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/mcp": "^0.0.80",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "typescript": "^5.8.3"
+  }
+}

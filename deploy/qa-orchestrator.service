@@ -1,0 +1,21 @@
+[Unit]
+Description=QA Orchestrator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=CHANGE_ME
+WorkingDirectory=/opt/qa-orchestrator
+EnvironmentFile=/opt/qa-orchestrator/.env.local
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/qa-orchestrator/.qa-data /opt/qa-orchestrator/.next
+
+[Install]
+WantedBy=multi-user.target

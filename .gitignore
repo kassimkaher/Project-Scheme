@@ -1,0 +1,20 @@
+node_modules
+.next
+out
+
+# Local QA data: definitions, encrypted secrets, run artifacts, evidence.
+.qa-data
+.qa-data-*
+.qa-data-archive-*
+
+# Local configuration, including the encryption key.
+.env
+.env.local
+.env*.local
+
+# Playwright / tooling
+test-results
+playwright-report
+
+.DS_Store
+*.log
