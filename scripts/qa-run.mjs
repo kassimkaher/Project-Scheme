@@ -32,6 +32,16 @@ export async function startQaRun({ project, environment, mode, scope, base = 'ht
   return { project: imported.project, run: run.run, isolationMode: run.run.isolationMode || 'unsafe-local' };
 }
 
+export async function waitForQaRun(base, runId, intervalMs = 1000, attempts = 120) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const detail = await request(base, `/api/runs/${encodeURIComponent(runId)}`);
+    const run = detail.run || detail;
+    if (['completed', 'failed', 'cancelled'].includes(run.status)) return detail;
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(`Timed out waiting for QA run ${runId}`);
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const project = value(args, '--project');
@@ -44,6 +54,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       const result = await startQaRun({ project, environment, mode, scope: value(args, '--scope'), base: value(args, '--base') });
       console.log(`QA run started: ${result.run.id} for ${result.project.name}`);
       console.log(`Isolation mode: ${result.isolationMode} (not sandboxed)`);
+      if (args.includes('--wait')) {
+        const detail = await waitForQaRun(value(args, '--base') || 'http://127.0.0.1:4100', result.run.id);
+        const run = detail.run || detail;
+        console.log(JSON.stringify({ runId: run.id, status: run.status, counts: run.counts, reportExists: run.reportExists, failure: run.failure }, null, 2));
+        if (run.status !== 'completed') process.exitCode = 1;
+        else if ((run.counts?.failed || 0) > 0) process.exitCode = 2;
+      }
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1;
     }

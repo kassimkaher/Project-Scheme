@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { discoverProject, migrateControlPlane, normalizeProject, validateControlPlane } from './control-plane.mjs';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
 
@@ -38,20 +39,10 @@ function fail(message) {
   throw new Error(`Invalid project answers: ${message}`);
 }
 
-export function validateAnswers(input) {
-  if (!input || typeof input !== "object" || Array.isArray(input)) fail("expected an object");
-  const { project, platforms = {}, database = {}, environments = [], qa = {}, security = {} } = input;
-  if (!project || typeof project.name !== "string" || !project.name.trim()) fail("project.name is required");
-  if (!['small', 'production', 'enterprise'].includes(project.profile)) fail("project.profile must be small, production, or enterprise");
-  if (!project.type || typeof project.type !== "string") fail("project.type is required");
-  if (!Array.isArray(environments) || environments.length === 0) fail("environments must contain at least one environment");
-  for (const [name, platform] of Object.entries(platforms)) {
-    if (typeof platform !== "object" || typeof platform.enabled !== "boolean") fail(`platforms.${name}.enabled must be boolean`);
-  }
-  if (database.engine !== undefined && typeof database.engine !== "string") fail("database.engine must be a string");
-  if (typeof qa.enabled !== "boolean") fail("qa.enabled must be boolean");
-  if (security.sensitivity && !['low', 'medium', 'high'].includes(security.sensitivity)) fail("security.sensitivity must be low, medium, or high");
-  return input;
+export async function validateAnswers(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) fail('expected an object');
+  const schema = JSON.parse(await fs.readFile(path.join(root, 'scheme/schemas/project.schema.json'), 'utf8'));
+  return validateControlPlane(normalizeProject(migrateControlPlane(input)), schema);
 }
 
 export function selectSkills(answers) {
@@ -97,7 +88,7 @@ function qaSystem(answers) {
 }
 
 export async function generateProject(answers, outputDirectory) {
-  validateAnswers(answers);
+  answers = await validateAnswers(answers);
   const destination = path.resolve(outputDirectory);
   const skills = selectSkills(answers);
   const templateDirectory = path.join(root, "scheme", "project-template");
@@ -116,7 +107,7 @@ export async function generateProject(answers, outputDirectory) {
       await writeFile(path.join(destination, relative), template(source, answers, skills));
     }
   }
-  return { destination, profile: answers.project.profile, skills, qaEnabled: answers.qa.enabled };
+  return { destination, profile: answers.project.profile, recommendation: answers.project.profile_recommendation, skills, qaEnabled: answers.qa.enabled };
 }
 
 async function readAnswers(file) {
@@ -125,7 +116,7 @@ async function readAnswers(file) {
 }
 
 function usage() {
-  return "Usage: node scheme/scripts/bootstrap.mjs --answers <answers.yaml|json> --output <new-project-directory>";
+  return "Usage: node scheme/scripts/bootstrap.mjs --answers <answers.yaml|json> --output <new-project-directory> [--existing <source-directory>]";
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -137,8 +128,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exitCode = 1;
   } else {
     try {
-      const result = await generateProject(await readAnswers(args[answerIndex + 1]), args[outputIndex + 1]);
+      const answers = await readAnswers(args[answerIndex + 1]);
+      const existingIndex = args.indexOf('--existing');
+      if (existingIndex >= 0 && args[existingIndex + 1]) answers.discovery = await discoverProject(path.resolve(args[existingIndex + 1]));
+      const result = await generateProject(answers, args[outputIndex + 1]);
       console.log(`Generated ${result.profile} project at ${result.destination}`);
+      console.log(`Profile recommendation: ${result.recommendation.profile} (${result.recommendation.factors.join(', ')})`);
       console.log(`Selected skills: ${result.skills.join(", ")}`);
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));

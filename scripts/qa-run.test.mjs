@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { startQaRun } from './qa-run.mjs';
+import { startQaRun, waitForQaRun } from './qa-run.mjs';
 
 const seen = [];
 const server = http.createServer(async (req, res) => {
@@ -13,6 +13,7 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('content-type', 'application/json');
   if (req.url === '/api/projects/import') return res.end(JSON.stringify({ outcome: 'created', project: { id: 'project-1', name: 'Generic fixture' } }));
   if (req.url === '/api/projects/project-1/runs') return res.end(JSON.stringify({ run: { id: 'run-1', isolationMode: 'unsafe-local' } }));
+  if (req.url === '/api/runs/run-1') return res.end(JSON.stringify({ run: { id: 'run-1', status: 'completed', counts: { failed: 0 }, reportExists: true } }));
   res.statusCode = 404; res.end(JSON.stringify({ error: 'not found' }));
 });
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -25,6 +26,7 @@ try {
   assert.equal(result.isolationMode, 'unsafe-local');
   assert.equal(seen[0].body.onConflict, 'update');
   assert.deepEqual(seen[1].body.scope, { features: ['checkout'] });
+  assert.equal((await waitForQaRun(`http://127.0.0.1:${address.port}`, 'run-1', 1, 1)).run.reportExists, true);
   console.log('qa run API integration test passed');
 } finally {
   await new Promise((resolve) => server.close(resolve));

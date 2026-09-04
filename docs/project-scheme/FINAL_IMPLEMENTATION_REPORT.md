@@ -1,5 +1,17 @@
 # Final implementation report
 
+## V2 update
+
+Baseline branch and HEAD: `project-scheme/codex-system-v1` at `f15e555b11e9ec6a4bfc86f5adbed829855d2fc0`. V2 uses successor branch `project-scheme/v2-closure` to preserve a reviewable V1 baseline.
+
+V2 makes the control plane versioned (`control_plane_version: 2`), normalizes and validates project state through the canonical JSON Schema, preserves all bootstrap input rather than dropping risk and product attributes, records deterministic explainable profile recommendations, and adds non-destructive v1 migration. Existing-project discovery inspects manifests and common platform/configuration markers through `--existing` without changing source.
+
+Every Skill now has strict `name`/`description` frontmatter and a structural validator. The QA CLI can wait for terminal status and emit machine-readable result metadata with automation exit semantics. The isolation red-team pass created a macOS `sandbox-exec` kernel-boundary probe; it proves a configured unrelated path is denied but also proved that a usable least-privilege Claude/browser profile remains unfinished.
+
+V2 evidence: skill validator passed for 10 Skills; five bootstrap scenario/idempotence checks passed; QA API start/wait test passed; typecheck passed; macOS sandbox probe passed. V1’s previously verified build, redaction, doctor, backup, dogfood, and 114/0 live QA self-test remain part of the baseline.
+
+First-project procedure: [FIRST-PROJECT-BOOTSTRAP.md](FIRST-PROJECT-BOOTSTRAP.md). Red-team evidence: [RED_TEAM_REPORT.md](RED_TEAM_REPORT.md).
+
 ## Identity
 
 - Baseline HEAD: `07289c1889216909029735741002c0906a2b970c`
@@ -33,4 +45,4 @@ No real target system or credentials were used for dogfood. Cross-platform OS-le
 
 ## Verdict
 
-PROJECT SCHEME V1: NOT CLOSED
+PROJECT SCHEME V2: NOT CLOSED

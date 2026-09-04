@@ -59,7 +59,7 @@ try {
   ios.platforms.ios_native.enabled = true;
   assert((await generateProject(ios, path.join(temporary, "ios"))).skills.includes("ios-native"));
 
-  assert.throws(() => validateAnswers({}), /project.name/);
+  await assert.rejects(() => validateAnswers({}), /project.name is required/);
   assert.deepEqual(selectSkills({ ...base, qa: { enabled: false }, platforms: { backend: { enabled: false } }, database: {} }).includes("qa-integration"), false);
   console.log("bootstrap tests passed: 5 scenarios, schema guards, selective skills, idempotence, generated structure");
 } finally {
