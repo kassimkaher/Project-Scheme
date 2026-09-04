@@ -1,5 +1,7 @@
 # QA Orchestrator
 
+This repository also contains **Project Scheme**, an additive bootstrap layer for creating project-local AI context and optional QA integration without copying the QA engine. Start at [START-HERE.md](START-HERE.md).
+
 A self-hosted AI QA control room for web applications and APIs.
 
 It is designed around one simple workflow:

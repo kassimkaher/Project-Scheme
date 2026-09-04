@@ -1,0 +1,15 @@
+project:
+  name: Small Web App
+  type: freelance
+  profile: small
+  expected_lifetime: short
+platforms:
+  backend: { enabled: true, stack: node }
+  web: { enabled: true, framework: nextjs }
+  flutter: { enabled: false }
+  android_native: { enabled: false }
+  ios_native: { enabled: false }
+database: { engine: postgres }
+environments: [dev, qa]
+qa: { enabled: true, api: true, web: true, mobile: false }
+security: { sensitivity: low, regulated: false }

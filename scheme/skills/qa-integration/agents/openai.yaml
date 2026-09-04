@@ -1,0 +1,3 @@
+interface:
+  display_name: QA integration
+  short_description: Connect feature work to independent QA.
