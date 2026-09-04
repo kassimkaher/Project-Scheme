@@ -22,6 +22,7 @@ try {
   assert(!smallResult.skills.includes("android-native"));
   assert.match(await fs.readFile(path.join(smallResult.destination, ".ai/architecture.md"), "utf8"), /simple_feature_first/);
   assert(await fs.stat(path.join(smallResult.destination, ".qa/qa-system.md")));
+  assert.match(await fs.readFile(path.join(smallResult.destination, ".ai/project.yaml"), "utf8"), /control_plane_version: 2/);
   await assert.rejects(fs.stat(path.join(smallResult.destination, "scheme")));
 
   // Scenario B: production Flutter gets flavor-aware mobile, QA, and release guidance.
@@ -43,8 +44,10 @@ try {
   enterprise.platforms.android_native.enabled = true;
   enterprise.platforms.ios_native.enabled = true;
   enterprise.security = { sensitivity: "high", regulated: true };
+  enterprise.payments = { enabled: true };
   const enterpriseResult = await generateProject(enterprise, path.join(temporary, "enterprise"));
   for (const skill of ["backend-api", "web-application", "flutter-mobile", "android-native", "ios-native", "security-baseline", "release-readiness"]) assert(enterpriseResult.skills.includes(skill));
+  assert.match(await fs.readFile(path.join(enterpriseResult.destination, ".ai/project.yaml"), "utf8"), /payments:/);
 
   await fs.writeFile(path.join(smallResult.destination, ".ai/decisions.md"), "# Keep this decision\n");
   await generateProject(small, smallResult.destination);

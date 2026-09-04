@@ -71,14 +71,9 @@ async function writeFile(destination, content, overwrite = false) {
 
 function projectYaml(answers) {
   return stringifyYaml({
-    project: answers.project,
-    platforms: answers.platforms,
-    database: answers.database,
+    ...answers,
     architecture: { style: profileFor(answers).architecture },
-    environments: answers.environments,
-    mobile: answers.mobile ?? {},
-    qa: answers.qa,
-    contracts: answers.contracts ?? {},
+    selected_skills: selectSkills(answers),
   });
 }
 
