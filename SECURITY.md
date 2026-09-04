@@ -68,6 +68,34 @@ The prompt forbids writing passwords, TOTP codes, tokens, cookies, authorization
 headers, private keys or full sensitive request bodies into any artifact, and
 requires accounts to be referenced by id and role only.
 
+## Trust boundary: the QA agent runs as you
+
+This is the most important thing to understand before running this tool.
+
+The QA session is launched with `--permission-mode bypassPermissions`, because a
+non-interactive session that can be prompted is a session that hangs. That means
+the agent can run any command your user account can run. Its working directory is
+the run directory, and the prompt now forbids reading or writing outside it — but
+a prompt is guidance to a model, not a sandbox.
+
+Observed in practice: a QA session ran `ls -la ../..` and `cat ../../project.json`
+to "understand the setup" before the confinement rule was added. It stayed
+read-only and inside the data directory, but nothing technically stopped it going
+further.
+
+Consequences to accept, or mitigate yourself:
+
+- Do not run this on a machine holding data you cannot afford to lose or expose.
+- Keep your QA definitions in source control. They are the only thing that can
+  reconstruct a project; run history cannot be recovered.
+- `.qa-data` is a plain directory tree owned by your user. A misbehaving agent,
+  an errant script, or a mistaken command can remove a project. The store keeps
+  `projects.index.json` so the library *reports* a project whose data has gone
+  missing instead of quietly listing fewer projects — but reporting is not
+  recovery.
+- For stronger isolation, run the orchestrator in a container or a dedicated
+  user account with access only to what a QA run legitimately needs.
+
 ## Run isolation
 
 Each run gets its own directory, MCP configuration, browser profile

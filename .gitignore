@@ -2,6 +2,10 @@ node_modules
 .next
 out
 
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
 # Local QA data: definitions, encrypted secrets, run artifacts, evidence.
 .qa-data
 .qa-data-*

@@ -10,6 +10,7 @@ type ProjectSummary = {
   runCount: number; latestRunId?: string; latestRunStatus?: string;
 };
 type Run = { id: string; projectId: string; projectName: string; mode: string; status: string; stage: string; createdAt: string };
+type MissingProject = { id: string; name: string; createdAt: string; sourceFilename?: string };
 
 type Conflict = {
   match: { id: string; name: string; runCount: number; lastRunAt?: string; matchedOn: string };
@@ -22,6 +23,7 @@ type Conflict = {
  */
 export default function Library() {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
+  const [missing, setMissing] = useState<MissingProject[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [raw, setRaw] = useState('');
   const [filename, setFilename] = useState<string | undefined>();
@@ -37,10 +39,11 @@ export default function Library() {
   const refresh = useCallback(async () => {
     try {
       const [p, r] = await Promise.all([
-        api<{ projects: ProjectSummary[] }>('/api/projects'),
+        api<{ projects: ProjectSummary[]; missing?: MissingProject[] }>('/api/projects'),
         api<{ runs: Run[] }>('/api/runs'),
       ]);
       setProjects(p.projects);
+      setMissing(p.missing || []);
       setRuns(r.runs.filter((x) => x.status === 'running' || x.status === 'queued'));
     } catch (e: any) {
       setError(e.message);
@@ -128,6 +131,21 @@ export default function Library() {
               {r.projectName} · {r.mode} · {r.stage}
             </a>
           ))}
+        </div>
+      )}
+
+      {/* Recorded projects whose data is gone. Reporting this beats listing fewer
+          projects and letting the user assume they were never imported. */}
+      {missing.length > 0 && (
+        <div className="notice" style={{ background: '#fff3cf', color: '#7e6115' }}>
+          <strong>تنبيه:</strong> {missing.length} مشروع مُسجّل لكن بياناته غير موجودة على القرص:{' '}
+          {missing.map((m) => (
+            <span key={m.id} className="mono" style={{ marginInlineEnd: 8 }}>
+              {m.name}{m.sourceFilename ? ` (${m.sourceFilename})` : ''}
+            </span>
+          ))}
+          . أُنشئت في {missing.map((m) => fmtDate(m.createdAt)).join('، ')}.
+          {' '}أعد استيراد ملف التعريف لاستعادة المشروع — سجل التشغيلات السابق لا يمكن استرجاعه.
         </div>
       )}
 

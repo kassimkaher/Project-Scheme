@@ -409,6 +409,8 @@ section('Run comparison reports what changed');
 }
 
 // ---- 12. concurrency guard
+// Depends on pBad from section 8 (unreachable host) still existing; section 15
+// deletes it.
 section('Concurrency is enforced explicitly');
 {
   const dir = path.join(DATA, 'projects', p2, 'runs', '33333333-3333-4333-8333-333333333333');
@@ -426,10 +428,16 @@ section('Concurrency is enforced explicitly');
   ok('the refusal explains why', /active run/i.test(blocked.json?.error || ''), blocked.json?.error);
   ok('the refusal names the blocking run', blocked.json?.activeRunId === '33333333-3333-4333-8333-333333333333');
 
-  const otherProject = await post(`/api/projects/${p1}/runs`, { envId: 'qa', mode: 'analyze', enforcePreflight: true });
-  ok('another project is not blocked by project B\'s run (or fails for its own reason)',
-    otherProject.status !== 409 || !/active run/i.test(otherProject.json?.error || ''),
-    `${otherProject.status}: ${otherProject.json?.error}`);
+  // Cross-project check uses the UNREACHABLE project on purpose. Launching the
+  // reachable one would pass preflight and spawn a real Claude Code session that
+  // this suite does not own and cannot clean up — an earlier version did exactly
+  // that and left two live agent sessions running after the suite reported green.
+  // A 424 here proves the request was refused by preflight, not by concurrency.
+  const otherProject = await post(`/api/projects/${pBad}/runs`, { envId: 'qa', mode: 'web', enforcePreflight: true });
+  ok('a different project is not blocked by project B\'s active run',
+    otherProject.status !== 409, `${otherProject.status}: ${otherProject.json?.error}`);
+  ok('that request was refused by preflight, so no agent session was spawned',
+    otherProject.status === 424, `${otherProject.status}`);
 
   await fs.rm(dir, { recursive: true, force: true });
 }
@@ -478,7 +486,14 @@ section('Everything survives an orchestrator restart');
   ok('library is non-empty before restart check', names.length >= 2, names.join(', '));
   // The store is read from disk on every request, so re-reading proves durability.
   const meta = JSON.parse(await fs.readFile(path.join(DATA, 'meta.json'), 'utf8'));
-  ok('store records its schema version', meta.schemaVersion === 2, JSON.stringify(meta.schemaVersion));
+  // Read the expected version out of the source so a schema bump does not need
+  // this assertion edited — a hardcoded 2 failed the suite the moment it moved to 3.
+  const storeSrc = await fs.readFile(path.join(import.meta.dirname, '..', 'lib', 'store.ts'), 'utf8');
+  const expected = Number(storeSrc.match(/SCHEMA_VERSION\s*=\s*(\d+)/)?.[1]);
+  ok('store records the current schema version',
+    meta.schemaVersion === expected, `on disk ${meta.schemaVersion}, source says ${expected}`);
+  ok('project integrity index exists',
+    await fs.access(path.join(DATA, 'projects.index.json')).then(() => true).catch(() => false));
   const after = await get('/api/projects');
   ok('the same projects are still listed', JSON.stringify(after.json.projects.map((p) => p.name).sort()) === JSON.stringify(names));
   const runsAfter = await get(`/api/projects/${p2}/runs?all=true`);
@@ -503,6 +518,20 @@ section('Deleting a project removes its secrets and run artifacts');
 }
 
 // ------------------------------------------------------------------- summary
+
+// ---- 16. the suite itself must leave nothing running
+section('The suite leaves no process behind');
+{
+  const { execSync } = await import('node:child_process');
+  const count = (pat) => {
+    try { return execSync(`pgrep -f ${JSON.stringify(pat)} | wc -l`, { encoding: 'utf8' }).trim(); }
+    catch { return '0'; }
+  };
+  for (const pat of ['scripts/run-agent.mjs', 'output-format stream-json', '@playwright/mcp/cli.js']) {
+    const n = Number(count(pat));
+    ok(`no leftover process matching "${pat}"`, n === 0, `${n} found`);
+  }
+}
 
 if (browser) await browser.close();
 

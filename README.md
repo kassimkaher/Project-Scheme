@@ -379,6 +379,12 @@ Humans can still add explicit business notes in the Markdown spec when a behavio
   as "new" and "resolved" rather than "fixed".
 - Single local user. There is no authentication, no RBAC and no audit log; see
   the hardening list above before running this for a team.
+- **The QA agent runs with your permissions.** A non-interactive session must not
+  be promptable, so it is started with `bypassPermissions` and can run anything
+  your user can. The prompt confines it to its run directory, but that is
+  guidance to a model, not a sandbox. Keep your QA definitions in source control,
+  and read the trust-boundary section of SECURITY.md before pointing this at
+  anything important.
 - Mobile testing is not included yet.
 
 These are deliberate boundaries. The Web/API AI-QA loop is represented end to

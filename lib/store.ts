@@ -8,13 +8,20 @@ import type {
 import { decryptJson, encryptJson } from './crypto';
 import { fingerprintSpec, mergeSecrets, specStats, splitSecrets } from './spec';
 
-export const SCHEMA_VERSION = 2;
+/**
+ * 2 → nested runs, split secrets.
+ * 3 → adds projects.index.json so a project whose directory vanishes is
+ *     reported instead of silently disappearing from the library.
+ */
+export const SCHEMA_VERSION = 3;
 
 const root = () => path.resolve(process.cwd(), process.env.QA_DATA_DIR || '.qa-data');
 const projectsDir = () => path.join(root(), 'projects');
 const legacyRunsDir = () => path.join(root(), 'runs');
 const orphanRunsDir = () => path.join(root(), 'orphan-runs');
 const metaFile = () => path.join(root(), 'meta.json');
+
+const indexFile = () => path.join(root(), 'projects.index.json');
 
 export const projectDir = (projectId: string) => path.join(projectsDir(), projectId);
 export const projectRunsDir = (projectId: string) => path.join(projectDir(projectId), 'runs');
@@ -32,11 +39,37 @@ async function readJson<T>(file: string): Promise<T | null> {
   }
 }
 
-/** Write via temp + rename so a concurrent reader never sees a partial file. */
+/**
+ * Write via temp + rename so a concurrent reader never sees a partial file.
+ *
+ * The temp name carries random bytes, not just pid + millisecond. Two writes to
+ * the same target inside one millisecond in one process would otherwise pick the
+ * same temp path; the first rename succeeds and the second fails with ENOENT.
+ * That is not hypothetical — it broke concurrent reads of the shared project
+ * index, because two requests both touch it while per-project files never
+ * collided.
+ */
 async function writeJsonAtomic(file: string, value: unknown, mode?: number) {
-  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(value, null, 2), mode ? { mode } : undefined);
-  await fs.rename(tmp, file);
+  const tmp = `${file}.${process.pid}.${crypto.randomBytes(6).toString('hex')}.tmp`;
+  try {
+    await fs.writeFile(tmp, JSON.stringify(value, null, 2), mode ? { mode } : undefined);
+    await fs.rename(tmp, file);
+  } catch (e) {
+    await fs.rm(tmp, { force: true }).catch(() => {});
+    throw e;
+  }
+}
+
+/**
+ * Serializes read-modify-write on the shared index within this process, so two
+ * concurrent requests cannot each read the old list and clobber the other's
+ * entry. Cross-process safety is out of scope: this is a single-server local app.
+ */
+let indexLock: Promise<unknown> = Promise.resolve();
+function withIndexLock<T>(fn: () => Promise<T>): Promise<T> {
+  const next = indexLock.then(fn, fn);
+  indexLock = next.catch(() => {});
+  return next;
 }
 
 async function exists(p: string) {
@@ -50,6 +83,65 @@ async function listDirs(p: string): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * A small append-only index of which projects are supposed to exist.
+ *
+ * The store is a plain directory tree, and the QA agent runs on the same machine
+ * with broad tool permissions. If a project directory disappears — an errant
+ * process, a mistaken delete, a failed sync — reading the directory alone makes
+ * the library silently show fewer projects, which is the worst possible failure
+ * mode for a tool whose job is to remember your projects.
+ *
+ * The index lets `listProjects` report a recorded project whose data is missing,
+ * so loss is visible instead of silent. It holds no secrets.
+ */
+type IndexEntry = { id: string; name: string; fingerprint: string; createdAt: string; sourceFilename?: string };
+
+async function readIndex(): Promise<IndexEntry[]> {
+  const existing = await readJson<IndexEntry[]>(indexFile());
+  if (existing) return existing;
+  // No index yet (older install, or the file was lost): seed it from what is on
+  // disk. Seeding rather than reporting everything as missing is deliberate — an
+  // absent index is not evidence of data loss, and crying wolf would be worse.
+  const seeded: IndexEntry[] = [];
+  for (const id of await listDirs(projectsDir())) {
+    const rec = await readJson<ProjectRecord>(path.join(projectDir(id), 'project.json'));
+    if (rec) {
+      seeded.push({
+        id: rec.id, name: rec.name, fingerprint: rec.fingerprint,
+        createdAt: rec.createdAt, sourceFilename: rec.sourceFilename,
+      });
+    }
+  }
+  await writeJsonAtomic(indexFile(), seeded);
+  return seeded;
+}
+
+async function indexUpsert(rec: ProjectRecord) {
+  return withIndexLock(async () => {
+    const list = await readIndex();
+    const next = list.filter((e) => e.id !== rec.id);
+    next.push({
+      id: rec.id, name: rec.name, fingerprint: rec.fingerprint,
+      createdAt: rec.createdAt, sourceFilename: rec.sourceFilename,
+    });
+    await writeJsonAtomic(indexFile(), next);
+  });
+}
+
+async function indexRemove(id: string) {
+  return withIndexLock(async () => {
+    await writeJsonAtomic(indexFile(), (await readIndex()).filter((e) => e.id !== id));
+  });
+}
+
+/** Projects the index records but whose directory is no longer present. */
+export async function missingProjects(): Promise<IndexEntry[]> {
+  await ensureStore();
+  const present = new Set(await listDirs(projectsDir()));
+  return (await readIndex()).filter((e) => !present.has(e.id));
 }
 
 // ----------------------------------------------------------------- migration
@@ -147,6 +239,19 @@ async function init() {
     }
   }
 
+  // Seed the integrity index from whatever is on disk right now.
+  const seeded: IndexEntry[] = [];
+  for (const id of await listDirs(projectsDir())) {
+    const rec = await readJson<ProjectRecord>(path.join(projectDir(id), 'project.json'));
+    if (rec) {
+      seeded.push({
+        id: rec.id, name: rec.name, fingerprint: rec.fingerprint,
+        createdAt: rec.createdAt, sourceFilename: rec.sourceFilename,
+      });
+    }
+  }
+  await writeJsonAtomic(indexFile(), seeded);
+
   await writeJsonAtomic(metaFile(), {
     schemaVersion: SCHEMA_VERSION,
     migratedAt: new Date().toISOString(),
@@ -205,6 +310,7 @@ export async function readProjectRecord(id: string): Promise<ProjectRecord> {
 async function writeProjectRecord(rec: ProjectRecord) {
   rec.updatedAt = new Date().toISOString();
   await writeJsonAtomic(path.join(projectDir(rec.id), 'project.json'), rec);
+  await indexUpsert(rec);
   return rec;
 }
 
@@ -278,6 +384,7 @@ export async function createProject(spec: QaProjectSpec, raw: string, filename?:
   await fs.writeFile(path.join(dir, 'secrets.enc'), encryptJson(secrets), { mode: 0o600 });
   await fs.writeFile(path.join(dir, 'source.enc'), encryptJson({ raw, filename }), { mode: 0o600 });
   await writeJsonAtomic(path.join(dir, 'project.json'), record);
+  await indexUpsert(record);
   return record;
 }
 
@@ -370,6 +477,7 @@ export async function duplicateProject(id: string, name?: string): Promise<Proje
     latestReportRunId: undefined,
   };
   await writeJsonAtomic(path.join(dstDir, 'project.json'), record);
+  await indexUpsert(record);
   return record;
 }
 
@@ -379,6 +487,7 @@ export async function deleteProject(id: string): Promise<void> {
   const dir = projectDir(id);
   if (!(await exists(dir))) throw new Error(`Project not found: ${id}`);
   await fs.rm(dir, { recursive: true, force: true });
+  await indexRemove(id);
 }
 
 export async function touchProjectOpened(id: string): Promise<void> {
